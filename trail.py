@@ -20,7 +20,6 @@ print("Ticker: ")
 tick=input()
 print("Quantity: ")
 quan=float(input())
-
 print("Trail %: ")
 trail_tage=float(input())
 
@@ -59,7 +58,6 @@ def gen_sign(query):
     output=output.replace("b'(stdin)= ",'')
     output=output.replace("'" ,'')
     print(output)
-
 
 def get_order(orderID):
     try:
@@ -109,10 +107,6 @@ _thread.start()
 result = wes.recv()
 res = json.loads(result)
 
-# print(type(res))
-# stream=res['data']
-# print(type(data))
-# print(len(data))
 data={}
 recvd=False
 while not recvd:
@@ -176,20 +170,14 @@ while True:
         stream=res['data']
         for dc in stream:
             if isinstance(dc,dict):
-            # print(dc['s'])
-            # for keys in dc:
-            #   print(keys)
                 if dc['s']==tick:
                     data=dc
                     recvd=True
-    # print(data['b'])
-
 
     bestBuy=float(data['b'])
     bestSell=float(data['a'])
     times=data['E']
     rows={}
-    # price['price']=float(price['price'])
     rows['serverTime']=data['E']
     rows['bestBuy']=bestBuy
     rows['bestSell']=bestSell
@@ -201,9 +189,6 @@ while True:
     row_ls=row.values.tolist()
 
     prices.append(row_ls[0])
-
-    # print(df.iloc[-35:-1,0])
-    # s_price=float(max(df.iloc[-420:-1,0]))
     try:
         r=get_order(orderId)
     except:
