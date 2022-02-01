@@ -12,17 +12,17 @@ import socket, threading
 import json, sys, os, time, csv, requests
 
 import config
+from flask import Flask,request
+from flask import render_template
+from flask import current_app as app
+from os.path import exists
 
-api_key = config.API_KEY
-secret_key = config.SECRET_KEY
 
-print("Ticker: ")
-tick=input()
-print("Quantity: ")
-quan=float(input())
-print("Trail %: ")
-trail_tage=float(input())
+# api_key = config.API_KEY
+# secret_key = config.SECRET_KEY
 
+app = Flask(__name__)
+app.app_context().push()
 
 def sellTrail(price):
     return(client.send('create_order',
@@ -74,135 +74,177 @@ async def send_heartbeat( *args):
         print("Beat sent")
         await asyncio.sleep(10*60)
 
-# public
-client = Client(api_key=api_key, secret_key=secret_key)
-print(client.send("ping"))
-wes = create_connection("wss://stream.wazirx.com/stream")
-print(wes)
 
-print(client.send('open_orders',
+@app.route("/", methods=["GET"])
+def home():
+    file_exists = exists("config.py")
+    if file_exists:
+        api_key = config.API_KEY
+        secret_key = config.SECRET_KEY
+        client = Client(api_key=api_key, secret_key=secret_key)
+        print(client.send("ping"))
+        wes = create_connection("wss://stream.wazirx.com/stream")
+        print(wes)
+        open_ord=client.send('open_orders',
               {"recvWindow": 5000,
-               "timestamp": int(time.time()*1000)}))
-print("orderId: ")
-orderId=int(input())
-print("sellPrice: ")
-sPrice=float(input())
+               "timestamp": int(time.time()*1000)})
+        # print("Ticker: ")
+        # tick=input()
+        # print("Quantity: ")
+        # quan=float(input())
+        # print("Trail %: ")
+        # trail_tage=float(input())
+        # print("orderId: ")
+        # orderId=int(input())
+        # print("sellPrice: ")
+        # sPrice=float(input())
 
-sleep(5)
-wes.send(json.dumps({
-    "event": "subscribe",
-    "streams": ["!ticker@arr"]
+        sleep(5)
+        wes.send(json.dumps({
+            "event": "subscribe",
+            "streams": ["!ticker@arr"]
+        }))
+        print(file_exists)
+        return render_template("dashboard.html",open_ord=open_ord)
+    else:
+        return render_template("login.html")
 
-}))
+@app.route("/login", methods=["POST"])
+def login():
+    api_key=request.form['apiKey']
+    secret_key=request.form['secretKey']
+    save=request.form['save']
+    if save=='True':
+        file = open("config.py", "w")
+        file.write("API-KEY = '"+api_key+"'")
+        file.write("SECRET_KEY = '"+secret_key+"'")
+        file.close()
+    client = Client(api_key=api_key, secret_key=secret_key)
+    print(client.send("ping"))
+    wes = create_connection("wss://stream.wazirx.com/stream")
+    print(wes)
+    return render_template("login.html")
+
+
+
+
 # _thread = threading.Thread(target=asyncio.run, args=(self.send_heartbeat(),))
 # _thread.start()
 
-connections = dict()
-connections["websocket"] = wes
-_thread = threading.Thread(target=asyncio.run, args=(send_heartbeat(),))
-_thread.start()
 
 
 
-result = wes.recv()
-res = json.loads(result)
-
-data={}
-recvd=False
-while not recvd:
+def loop():
+    connections = dict()
+    connections["websocket"] = wes
+    _thread = threading.Thread(target=asyncio.run, args=(send_heartbeat(),))
+    _thread.start()
     result = wes.recv()
     res = json.loads(result)
-    stream=res['data']
-    for dc in stream:
-        if isinstance(dc,dict):
-        # print(dc['s'])
-        # for keys in dc:
-        #   print(keys)
-            if dc['s']==tick:
-                data=dc
-                recvd=True
-print("data",data['b'])
 
-col_heads=['Bought','MinSell','SoldP','Comp','BuyOrderID','BuyStatus','SellOrderID','SellStatus']
-ob = []
-prices=[]
-buy_order={}
-rows={}
-
-# print(data)
-bestSell=float(data['a'])
-bestBuy=float(data['b'])
-rows['serverTime']=data['E']
-rows['bestBuy']=bestBuy
-rows['bestSell']=bestSell
-df=pd.DataFrame()
-row=pd.DataFrame()
-row = row.append(rows, ignore_index=True, sort=False)
-row['serverTime']= pd.to_datetime(row['serverTime'], unit='ms')
-df = df.append(row, ignore_index=True, sort=False)
-print(row.loc[0])
-row_ls=row.values.tolist()
-# print(row_ls)
-prices.append(row_ls[0])
-print('prices',prices)
-
-
-while True:
+    data={}
     recvd=False
     while not recvd:
-        try:
-            result = wes.recv()
-        except:
-            sleep(30)
-            wes = create_connection("wss://stream.wazirx.com/stream")
-
-            print(wes)
-            sleep(5)
-            wes.send(json.dumps({
-                "event": "subscribe",
-                "streams": ["!ticker@arr"]
-            }))
-            connections = dict()
-            connections["websocket"] = wes
-
+        result = wes.recv()
         res = json.loads(result)
-        # pprint.pprint(res)
         stream=res['data']
         for dc in stream:
             if isinstance(dc,dict):
+            # print(dc['s'])
+            # for keys in dc:
+            #   print(keys)
                 if dc['s']==tick:
                     data=dc
                     recvd=True
+    print("data",data['b'])
 
-    bestBuy=float(data['b'])
-    bestSell=float(data['a'])
-    times=data['E']
+    col_heads=['Bought','MinSell','SoldP','Comp','BuyOrderID','BuyStatus','SellOrderID','SellStatus']
+    ob = []
+    prices=[]
+    buy_order={}
     rows={}
+
+    # print(data)
+    bestSell=float(data['a'])
+    bestBuy=float(data['b'])
     rows['serverTime']=data['E']
     rows['bestBuy']=bestBuy
     rows['bestSell']=bestSell
+    df=pd.DataFrame()
     row=pd.DataFrame()
     row = row.append(rows, ignore_index=True, sort=False)
     row['serverTime']= pd.to_datetime(row['serverTime'], unit='ms')
     df = df.append(row, ignore_index=True, sort=False)
-    print("Best sell price",bestSell)
+    print(row.loc[0])
     row_ls=row.values.tolist()
-
+    # print(row_ls)
     prices.append(row_ls[0])
-    try:
-        r=get_order(orderId)
-    except:
-        sleep(10)
-        r=get_order(orderId)
-    status=r[1]
-    # print(status)
-    if status['status']=="done":
-        print("complete")
-        break
-    elif bestSell>sPrice:
-        r=updateTrail(orderId,bestSell)
-        stat=r[1]
-        orderId=stat['id']
-        sPrice=bestSell
-        sleep(15)
-    sleep(5)
+    print('prices',prices)
+
+
+    while True:
+        recvd=False
+        while not recvd:
+            try:
+                result = wes.recv()
+            except:
+                sleep(30)
+                wes = create_connection("wss://stream.wazirx.com/stream")
+
+                print(wes)
+                sleep(5)
+                wes.send(json.dumps({
+                    "event": "subscribe",
+                    "streams": ["!ticker@arr"]
+                }))
+                connections = dict()
+                connections["websocket"] = wes
+
+            res = json.loads(result)
+            # pprint.pprint(res)
+            stream=res['data']
+            for dc in stream:
+                if isinstance(dc,dict):
+                    if dc['s']==tick:
+                        data=dc
+                        recvd=True
+
+        bestBuy=float(data['b'])
+        bestSell=float(data['a'])
+        times=data['E']
+        rows={}
+        rows['serverTime']=data['E']
+        rows['bestBuy']=bestBuy
+        rows['bestSell']=bestSell
+        row=pd.DataFrame()
+        row = row.append(rows, ignore_index=True, sort=False)
+        row['serverTime']= pd.to_datetime(row['serverTime'], unit='ms')
+        df = df.append(row, ignore_index=True, sort=False)
+        print("Best sell price",bestSell)
+        row_ls=row.values.tolist()
+
+        prices.append(row_ls[0])
+        try:
+            r=get_order(orderId)
+        except:
+            sleep(10)
+            r=get_order(orderId)
+        status=r[1]
+        # print(status)
+        if status['status']=="done":
+            print("complete")
+            break
+        elif bestSell>sPrice:
+            r=updateTrail(orderId,bestSell)
+            stat=r[1]
+            orderId=stat['id']
+            sPrice=bestSell
+            sleep(15)
+        sleep(5)
+
+
+
+
+app.app_context().push()
+if __name__ == '__main__':
+    app.run(host='localhost',port=8080, debug=True)
