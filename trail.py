@@ -2,25 +2,20 @@ from wazirx_sapi_client.rest import Client
 from wazirx_sapi_client.websocket import WebsocketClient
 
 import time
-import requests
-import json
 import  websocket,json, pprint
 from websocket import create_connection
-
 from time import sleep
 import logging
 import pandas as pd
-import csv
 import asyncio
 import socket, threading
-import json, sys, os, time
+import json, sys, os, time, csv, requests
+
 import config
 
 api_key = config.API_KEY
 secret_key = config.SECRET_KEY
 
-tp=0.007
-# trail_tage=0.01
 print("Ticker: ")
 tick=input()
 print("Quantity: ")
@@ -29,10 +24,6 @@ quan=float(input())
 print("Trail %: ")
 trail_tage=float(input())
 
-def buy(price):
-    return(client.send('create_order',
-              {"symbol": "ethinr", "side": "buy", "type": "limit", "price": price, "quantity": quan, "recvWindow": 5000,
-               "timestamp": int(time.time()*1000)}))
 
 def sellTrail(price):
     return(client.send('create_order',
