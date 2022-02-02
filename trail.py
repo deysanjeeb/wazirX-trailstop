@@ -11,12 +11,15 @@ import asyncio
 import socket, threading
 import json, sys, os, time, csv, requests
 
-import config
+
 from flask import Flask,request
 from flask import render_template
 from flask import current_app as app
 from os.path import exists
 
+file_exists = exists("config.py")
+if file_exists:
+    import config
 
 # api_key = config.API_KEY
 # secret_key = config.SECRET_KEY
@@ -116,8 +119,8 @@ def login():
     save=request.form['save']
     if save=='True':
         file = open("config.py", "w")
-        file.write("API-KEY = '"+api_key+"'")
-        file.write("SECRET_KEY = '"+secret_key+"'")
+        file.write("API-KEY = '"+api_key+"'\n")
+        file.write("SECRET_KEY = '"+secret_key+"'\n")
         file.close()
     client = Client(api_key=api_key, secret_key=secret_key)
     print(client.send("ping"))
