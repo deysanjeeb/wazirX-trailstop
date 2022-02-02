@@ -10,19 +10,28 @@
 <body>
 {{open_ord}}
 
-<form>
-  <label class="form-label">Ticker:</label>
-  <input type="text" name="tick" class="form-control form-control-lg" />
-  <label class="form-label" >Quantity</label>
-  <input type="text" name="quan" class="form-control form-control-lg" />
-  <label class="form-label">Trail %:</label>
-  <input type="text" name="trail_tage" class="form-control form-control-lg" />
-  <label class="form-label">orderId:</label>
-  <input type="text" name="orderId" class="form-control form-control-lg" />
-  <label class="form-label">sellPrice:</label>
-  <input type="text" name="sPrice" class="form-control form-control-lg" />
-  <button class="btn btn-outline-light btn-lg px-5" type="submit">Enter</button>
-  
+{% if action == "parameters" %} 
+  <form action="/dashboard" method="POST" id="dashboard">
+    <label class="form-label">Ticker:</label>
+    <input type="text" name="tick" class="form-control form-control-lg" />
+    <label class="form-label" >Quantity</label>
+    <input type="text" name="quan" class="form-control form-control-lg" />
+    <label class="form-label">Trail %:</label>
+    <input type="text" name="trail_tage" class="form-control form-control-lg" />
+    <label class="form-label">orderId:</label>
+    <input type="text" name="orderId" class="form-control form-control-lg" />
+    <label class="form-label">sellPrice:</label>
+    <input type="text" name="sPrice" class="form-control form-control-lg" />
+    <button class="btn btn-outline-dark btn-lg px-5" type="submit">Enter</button>
   </form>
+  {% endif %}
+  {% if action == "complete" %} 
+  complete
+  {% endif %}
+
+  {% if action == "display" %} 
+  Price: stat['price']
+  Stop Price: stat['stopPrice']
+  {% endif %}
   </body>
   </html>

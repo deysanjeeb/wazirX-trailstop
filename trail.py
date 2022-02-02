@@ -20,6 +20,15 @@ from os.path import exists
 file_exists = exists("config.py")
 if file_exists:
     import config
+    api_key = config.API_KEY
+    secret_key = config.SECRET_KEY
+    client = Client(api_key=api_key, secret_key=secret_key)
+    print(client.send("ping"))
+    global wes
+    wes = create_connection("wss://stream.wazirx.com/stream")
+    print(wes)
+    print("connection true")
+
 
 # api_key = config.API_KEY
 # secret_key = config.SECRET_KEY
@@ -27,12 +36,13 @@ if file_exists:
 app = Flask(__name__)
 app.app_context().push()
 
+
 def sellTrail(price):
     return(client.send('create_order',
               {"symbol": "ethinr", "side": "sell", "type": "stoplimit", "price": (price-price*0.003), "stopPrice":price,"quantity": quan, "recvWindow": 5000,
                "timestamp": int(time.time()*1000)}))
 
-def updateTrail(orderID,price):
+def updateTrail(tick,orderID,price,trail_tage,quan):
     try:
         print(client.send('cancel_order',
                 {"symbol": tick, "orderId": orderID, "recvWindow": 5000, "timestamp": int(time.time()*1000)}))
@@ -82,12 +92,14 @@ async def send_heartbeat( *args):
 def home():
     file_exists = exists("config.py")
     if file_exists:
-        api_key = config.API_KEY
-        secret_key = config.SECRET_KEY
-        client = Client(api_key=api_key, secret_key=secret_key)
-        print(client.send("ping"))
-        wes = create_connection("wss://stream.wazirx.com/stream")
-        print(wes)
+        # api_key = config.API_KEY
+        # secret_key = config.SECRET_KEY
+        # global client
+        # global wes
+        # client = Client(api_key=api_key, secret_key=secret_key)
+        # print(client.send("ping"))
+        # wes = create_connection("wss://stream.wazirx.com/stream")
+        # print(wes)
         open_ord=client.send('open_orders',
               {"recvWindow": 5000,
                "timestamp": int(time.time()*1000)})
@@ -108,9 +120,25 @@ def home():
             "streams": ["!ticker@arr"]
         }))
         print(file_exists)
-        return render_template("dashboard.html",open_ord=open_ord)
+        return render_template("dashboard.html",open_ord=open_ord,action="parameters")
     else:
         return render_template("login.html")
+
+# @app.route("/dashboard", methods=["GET"])
+#     def dashboardShow():
+#         trail(tick,quan,trail_tage,orderId,sPrice,wes)
+
+@app.route("/dashboard", methods=["POST"])
+def dashboard():
+    tick=request.form['tick']
+    quan=float(request.form['quan'])
+    trail_tage=float(request.form['trail_tage'])
+    orderId=request.form['orderId']
+    sPrice=float(request.form['sPrice'])
+    r=get_order(orderId)
+    # render_template("dashboard.html",stat=r,action="display")
+    trail(tick,quan,trail_tage,orderId,sPrice,wes)
+    # render_template("dashboard.html",stat=r,action="display")
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -122,11 +150,13 @@ def login():
         file.write("API-KEY = '"+api_key+"'\n")
         file.write("SECRET_KEY = '"+secret_key+"'\n")
         file.close()
+    # global client
+    # global wes
     client = Client(api_key=api_key, secret_key=secret_key)
     print(client.send("ping"))
     wes = create_connection("wss://stream.wazirx.com/stream")
     print(wes)
-    return render_template("login.html")
+    return render_template("dashboard.html",open_ord=open_ord,action="parameters")
 
 
 
@@ -137,9 +167,9 @@ def login():
 
 
 
-def loop():
-    connections = dict()
-    connections["websocket"] = wes
+def trail(tick,quan,trail_tage,orderId,sPrice,wes):
+    # connections = dict()
+    # connections["websocket"] = wes
     _thread = threading.Thread(target=asyncio.run, args=(send_heartbeat(),))
     _thread.start()
     result = wes.recv()
@@ -200,8 +230,8 @@ def loop():
                     "event": "subscribe",
                     "streams": ["!ticker@arr"]
                 }))
-                connections = dict()
-                connections["websocket"] = wes
+                # connections = dict()
+                # connections["websocket"] = wes
 
             res = json.loads(result)
             # pprint.pprint(res)
@@ -236,12 +266,14 @@ def loop():
         # print(status)
         if status['status']=="done":
             print("complete")
+            render_template("dashboard.html",action="complete")
             break
-        elif bestSell>sPrice:
-            r=updateTrail(orderId,bestSell)
+        elif bestSell>int(sPrice):
+            r=updateTrail(tick,orderId,bestSell,trail_tage,quan)
             stat=r[1]
             orderId=stat['id']
             sPrice=bestSell
+            render_template("dashboard.html",stat=stat,action="display")
             sleep(15)
         sleep(5)
 
