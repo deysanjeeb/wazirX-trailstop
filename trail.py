@@ -125,11 +125,16 @@ def home():
         return render_template("login.html")
 
 # @app.route("/dashboard", methods=["GET"])
-#     def dashboardShow():
-#         trail(tick,quan,trail_tage,orderId,sPrice,wes)
+# def dashboardShow():
+#     return trail(tick,quan,trail_tage,orderId,sPrice,wes)
 
 @app.route("/dashboard", methods=["POST"])
 def dashboard():
+    global tick
+    global quan
+    global trail_tage
+    global orderId
+    global sPrice
     tick=request.form['tick']
     quan=float(request.form['quan'])
     trail_tage=float(request.form['trail_tage'])
@@ -266,14 +271,15 @@ def trail(tick,quan,trail_tage,orderId,sPrice,wes):
         # print(status)
         if status['status']=="done":
             print("complete")
-            render_template("dashboard.html",action="complete")
+            # render_template("dashboard.html",action="complete")
             break
         elif bestSell>int(sPrice):
             r=updateTrail(tick,orderId,bestSell,trail_tage,quan)
             stat=r[1]
             orderId=stat['id']
             sPrice=bestSell
-            render_template("dashboard.html",stat=stat,action="display")
+            print(stat)
+            # return render_template("dashboard.html",stat=stat,action="display")
             sleep(15)
         sleep(5)
 
