@@ -49,7 +49,7 @@ SECRET_KEY = 'your_secret_key'
 1. Start the trading bot:
 
    ```bash
-   python app.py
+   python trail.py
    ```
 
 2. Access the web interface by opening a web browser and navigating to [http://localhost:8080/](http://localhost:8080/).
